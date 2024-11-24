@@ -1,238 +1,238 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+import streamlit as st
 import pandas as pd
+import numpy as np
+import seaborn as sns
 import matplotlib.pyplot as plt
-from pandastable import Table
 
-class PandasTkApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Pandas Data Analysis Tool")
-        self.df = None
+# Function for uploading the file
+def upload_file():
+    try:
+        file = st.file_uploader("Upload CSV or Excel", type=["csv", "xlsx"])
+        if file:
+            if file.name.endswith("csv"):
+                df = pd.read_csv(file)
+            else:
+                df = pd.read_excel(file)
+            st.success("Data loaded successfully!")
+            return df
+        return None
+    except Exception as e:
+        st.error(f"Error uploading file: {e}")
+        return None
 
-        # Load Data Button
-        self.load_button = tk.Button(root, text="Load CSV/Excel", command=self.load_data)
-        self.load_button.grid(row=0, column=0, padx=5, pady=5)
+# Step 1: Data Understanding
+def data_understanding(df):
+    try:
+        st.write("### 1. Data Understanding")
+        st.write("**First 10 rows of the dataset:**")
+        st.write(df.head(10))
+    except Exception as e:
+        st.error(f"Error in Data Understanding: {e}")
 
-        # Data Exploration Buttons
-        self.head_button = tk.Button(root, text="Show Head", command=self.show_head)
-        self.head_button.grid(row=0, column=1, padx=5, pady=5)
+# Show full data button
+def show_full_data(df):
+    try:
+        if st.button('Show Full Data'):
+            st.write(df)
+    except Exception as e:
+        st.error(f"Error displaying full data: {e}")
 
-        self.info_button = tk.Button(root, text="Show Info", command=self.show_info)
-        self.info_button.grid(row=0, column=2, padx=5, pady=5)
+# Step 2: Data Cleaning
+def data_cleaning(df):
+    try:
+        st.write("### 2. Data Cleaning")
+        
+        st.write("**Missing values in each column:**")
+        st.write(df.isnull().sum())
+        
+        st.write("**Drop rows with missing values (if selected):**")
+        if st.button('Drop Missing Rows'):
+            df_clean = df.dropna()
+            st.write("Cleaned DataFrame:")
+            st.write(df_clean)
+        
+        st.write("**Fill missing values (if selected):**")
+        fill_option = st.selectbox('Choose fill method:', ['None', 'Mean', 'Median', 'Mode'])
+        if fill_option != 'None':
+            if fill_option == 'Mean':
+                df = df.fillna(df.mean())
+            elif fill_option == 'Median':
+                df = df.fillna(df.median())
+            elif fill_option == 'Mode':
+                df = df.fillna(df.mode().iloc[0])
+            st.write("Filled Missing Data:")
+            st.write(df)
+    except Exception as e:
+        st.error(f"Error in Data Cleaning: {e}")
 
-        self.describe_button = tk.Button(root, text="Show Describe", command=self.show_describe)
-        self.describe_button.grid(row=0, column=3, padx=5, pady=5)
+# Step 3: Univariate Analysis
+def univariate_analysis(df):
+    try:
+        st.write("### 3. Univariate Analysis")
+        column = st.selectbox("Select column for Univariate Analysis", df.columns)
+        plot_type = st.selectbox("Plot Type", ['line', 'histogram', 'boxplot', 'pie', 'area', 'violin'])
+        
+        st.write(f"**Distribution of the selected column: {column}:**")
+        if plot_type == 'line':
+            df[column].plot(kind='line')
+            plt.title(f"Line Plot of {column}")
+        elif plot_type == 'histogram':
+            df[column].plot(kind='hist', bins=30)
+            plt.title(f"Histogram of {column}")
+        elif plot_type == 'boxplot':
+            df[column].plot(kind='box')
+            plt.title(f"Boxplot of {column}")
+        elif plot_type == 'pie':
+            df[column].value_counts().plot(kind='pie', autopct='%1.1f%%')
+            plt.title(f"Pie Chart of {column}")
+        elif plot_type == 'area':
+            df[column].plot(kind='area')
+            plt.title(f"Area Plot of {column}")
+        elif plot_type == 'violin':
+            sns.violinplot(x=df[column])
+            plt.title(f"Violin Plot of {column}")
+        
+        st.pyplot(plt)
+    except Exception as e:
+        st.error(f"Error in Univariate Analysis: {e}")
 
-        self.null_counts_button = tk.Button(root, text="Show Null Counts", command=self.show_null_counts)
-        self.null_counts_button.grid(row=0, column=4, padx=5, pady=5)
+# Step 4: Multivariate Analysis
+def multivariate_analysis(df):
+    try:
+        st.write("### 4. Multivariate Analysis")
+        st.write("**Correlation between numerical columns (Heatmap):**")
+        numeric_df = df.select_dtypes(include=['float64', 'int64'])
+        if numeric_df.shape[1] > 0:
+            correlation_matrix = numeric_df.corr()
+            plt.figure(figsize=(10, 8))
+            sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm")
+            st.pyplot(plt)
+        else:
+            st.warning("No numerical columns found for correlation analysis.")
+    except Exception as e:
+        st.error(f"Error in Multivariate Analysis: {e}")
 
-        self.full_data_button = tk.Button(root, text="Show Full Data", command=self.show_full_data)
-        self.full_data_button.grid(row=0, column=5, padx=5, pady=5)
+# Step 5: Feature Engineering
+def feature_engineering(df):
+    try:
+        st.write("### 5. Feature Engineering")
+        st.write("**Create New Features (Example: Column Mean):**")
+        column_to_avg = st.selectbox("Select column to calculate mean", df.columns)
+        df[f'{column_to_avg}_mean'] = df[column_to_avg].mean()
+        st.write("New Feature Created:", f"{column_to_avg}_mean")
+        st.write(df.head())
+    except Exception as e:
+        st.error(f"Error in Feature Engineering: {e}")
 
-        # Filtering Controls
-        self.filter_column_label = tk.Label(root, text="Filter Column:")
-        self.filter_column_label.grid(row=1, column=0, padx=5, pady=5)
-        self.filter_column = tk.StringVar()
-        self.filter_column_dropdown = ttk.Combobox(root, textvariable=self.filter_column)
-        self.filter_column_dropdown.grid(row=1, column=1, padx=5, pady=5)
+# Step 6: Anomaly Detection
+def anomaly_detection(df):
+    try:
+        st.write("### 6. Anomaly Detection")
+        st.write("**Detect outliers using Z-Score:**")
+        z_scores = np.abs((df.select_dtypes(include=['float64', 'int64']) - df.mean()) / df.std())
+        outliers = (z_scores > 3).sum()
+        st.write(f"Number of outliers detected in columns: {outliers}")
+    except Exception as e:
+        st.error(f"Error in Anomaly Detection: {e}")
 
-        self.filter_value_label = tk.Label(root, text="Filter Value:")
-        self.filter_value_label.grid(row=1, column=2, padx=5, pady=5)
-        self.filter_value_entry = tk.Entry(root)
-        self.filter_value_entry.grid(row=1, column=3, padx=5, pady=5)
+# Step 7: Data Visualization
+def data_visualization(df):
+    try:
+        st.write("### 7. Data Visualization")
+        st.write("**Visualize correlations between columns (Correlation Heatmap):**")
+        numeric_df = df.select_dtypes(include=['float64', 'int64'])
+        if numeric_df.shape[1] > 0:
+            correlation_matrix = numeric_df.corr()
+            plt.figure(figsize=(10, 8))
+            sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm")
+            st.pyplot(plt)
+        else:
+            st.warning("No numerical columns found for correlation analysis.")
+    except Exception as e:
+        st.error(f"Error in Data Visualization: {e}")
 
-        self.apply_filter_button = tk.Button(root, text="Apply Filter", command=self.apply_filter)
-        self.apply_filter_button.grid(row=1, column=4, padx=5, pady=5)
+# Step 8: Identify Patterns and Trends
+def identify_patterns_and_trends(df):
+    try:
+        st.write("### 8. Identify Patterns and Trends")
+        st.write("**Trends based on time (if time-related column exists):**")
+        
+        date_columns = [col for col in df.columns if 'date' in col.lower() or 'time' in col.lower()]
+        if len(date_columns) > 0:
+            date_col = st.selectbox("Select a Date/Time Column", date_columns)
+            df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+            df.set_index(date_col, inplace=True)
+            df.resample('M').mean().plot()
+            plt.title("Monthly Trend")
+            st.pyplot(plt)
+        else:
+            st.warning("No 'Date' or 'Time' column found to analyze trends.")
+    except Exception as e:
+        st.error(f"Error in Identifying Patterns and Trends: {e}")
 
-        # Data Manipulation Buttons
-        self.sort_button = tk.Button(root, text="Sort Data", command=self.sort_data)
-        self.sort_button.grid(row=2, column=0, padx=5, pady=5)
+# Step 9: Insights Summary
+def insights_summary(df):
+    try:
+        st.write("### 9. Insights Summary")
+        st.write("**Summary of the analysis:**")
+        
+        st.write("**Data Overview:**")
+        st.write(f"Dataset contains {df.shape[0]} rows and {df.shape[1]} columns.")
+        
+        st.write("**Statistical Summary:**")
+        st.write(df.describe())
+        
+        st.write("**Potential Issues Detected:**")
+        missing_values = df.isnull().sum()
+        st.write(f"Missing values in columns: {missing_values[missing_values > 0]}")
+        
+        st.write("**Suggestions for improvement:**")
+        st.write("Check for any further feature engineering or imputation of missing values.")
+    except Exception as e:
+        st.error(f"Error in Insights Summary: {e}")
 
-        self.drop_na_button = tk.Button(root, text="Drop NA", command=self.drop_na)
-        self.drop_na_button.grid(row=2, column=1, padx=5, pady=5)
+# Step 10: X and Y Column Visualization (Scatter, Line, Bar)
+def x_y_visualization(df):
+    try:
+        st.write("### 10. Custom X and Y Column Visualization")
+        x_column = st.selectbox("Select X column", df.columns)
+        y_column = st.selectbox("Select Y column", df.columns)
+        plot_type = st.selectbox("Select Plot Type", ['scatter', 'line', 'bar', 'histogram'])
+        
+        if plot_type == 'scatter':
+            plt.scatter(df[x_column], df[y_column])
+            plt.xlabel(x_column)
+            plt.ylabel(y_column)
+            plt.title(f"Scatter Plot of {x_column} vs {y_column}")
+        elif plot_type == 'line':
+            df.plot(x=x_column, y=y_column, kind='line')
+            plt.title(f"Line Plot of {x_column} vs {y_column}")
+        elif plot_type == 'bar':
+            df.plot(x=x_column, y=y_column, kind='bar')
+            plt.title(f"Bar Plot of {x_column} vs {y_column}")
+        elif plot_type == 'histogram':
+            df.plot(x=x_column, y=y_column, kind='hist', bins=30)
+            plt.title(f"Histogram of {x_column} and {y_column}")
+        
+        st.pyplot(plt)
+    except Exception as e:
+        st.error(f"Error in X and Y Visualization: {e}")
 
-        self.fill_na_button = tk.Button(root, text="Fill NA", command=self.fill_na)
-        self.fill_na_button.grid(row=2, column=2, padx=5, pady=5)
-
-        self.remove_duplicates_button = tk.Button(root, text="Remove Duplicates", command=self.remove_duplicates)
-        self.remove_duplicates_button.grid(row=2, column=3, padx=5, pady=5)
-
-        # Grouping and Aggregation Controls
-        self.group_column_label = tk.Label(root, text="Group By:")
-        self.group_column_label.grid(row=3, column=0, padx=5, pady=5)
-        self.group_column = tk.StringVar()
-        self.group_column_dropdown = ttk.Combobox(root, textvariable=self.group_column)
-        self.group_column_dropdown.grid(row=3, column=1, padx=5, pady=5)
-
-        self.agg_function_label = tk.Label(root, text="Aggregate Function:")
-        self.agg_function_label.grid(row=3, column=2, padx=5, pady=5)
-        self.agg_function = tk.StringVar()
-        self.agg_function_dropdown = ttk.Combobox(root, textvariable=self.agg_function)
-        self.agg_function_dropdown['values'] = ['sum', 'mean', 'count', 'max', 'min']
-        self.agg_function_dropdown.grid(row=3, column=3, padx=5, pady=5)
-
-        self.apply_group_button = tk.Button(root, text="Apply Grouping", command=self.apply_grouping)
-        self.apply_group_button.grid(row=3, column=4, padx=5, pady=5)
-
-        # Data Visualization Buttons
-        self.plot_type_label = tk.Label(root, text="Plot Type:")
-        self.plot_type_label.grid(row=4, column=0, padx=5, pady=5)
-        self.plot_type = tk.StringVar()
-        self.plot_type_dropdown = ttk.Combobox(root, textvariable=self.plot_type)
-        self.plot_type_dropdown['values'] = ['line', 'bar', 'hist', 'scatter']
-        self.plot_type_dropdown.grid(row=4, column=1, padx=5, pady=5)
-
-        self.x_column_label = tk.Label(root, text="X Column:")
-        self.x_column_label.grid(row=4, column=2, padx=5, pady=5)
-        self.x_column = tk.StringVar()
-        self.x_column_dropdown = ttk.Combobox(root, textvariable=self.x_column)
-        self.x_column_dropdown.grid(row=4, column=3, padx=5, pady=5)
-
-        self.y_column_label = tk.Label(root, text="Y Column:")
-        self.y_column_label.grid(row=4, column=4, padx=5, pady=5)
-        self.y_column = tk.StringVar()
-        self.y_column_dropdown = ttk.Combobox(root, textvariable=self.y_column)
-        self.y_column_dropdown.grid(row=4, column=5, padx=5, pady=5)
-
-        self.plot_button = tk.Button(root, text="Plot Data", command=self.plot_data)
-        self.plot_button.grid(row=4, column=6, padx=5, pady=5)
-
-        # Export Button
-        self.export_button = tk.Button(root, text="Export Data", command=self.export_data)
-        self.export_button.grid(row=5, column=0, padx=5, pady=5)
-
-        # Data Display Frame
-        self.frame = tk.Frame(root)
-        self.frame.grid(row=6, column=0, columnspan=7, sticky="nsew")
-        self.root.grid_rowconfigure(6, weight=1)
-        self.root.grid_columnconfigure(tuple(range(7)), weight=1)
-
-    def load_data(self):
-        file_path = filedialog.askopenfilename(title="Open CSV or Excel File", filetypes=[("CSV files", "*.csv"), ("Excel files", "*.xlsx")])
-        if file_path:
-            try:
-                if file_path.endswith('.csv'):
-                    self.df = pd.read_csv(file_path)
-                elif file_path.endswith('.xlsx'):
-                    self.df = pd.read_excel(file_path)
-                messagebox.showinfo("Success", "Data loaded successfully!")
-                self.display_data(self.df)
-                self.populate_columns()
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to load data: {e}")
-
-    def populate_columns(self):
-        if self.df is not None:
-            columns = ['None'] + list(self.df.columns)
-            self.filter_column_dropdown['values'] = columns
-            self.group_column_dropdown['values'] = columns
-            self.x_column_dropdown['values'] = self.df.columns
-            self.y_column_dropdown['values'] = self.df.columns
-
-    def show_head(self):
-        self.display_data(self.df.head(10))
-
-    def show_info(self):
-        messagebox.showinfo("Data Info", str(self.df.info()))
-
-    def show_describe(self):
-        describe_df = self.df.describe(include='all')
-        describe_text = "Data Description:\n\n" + str(describe_df) + "\n"
-        describe_text += "\nStatistical Summary:\n"
-        for col in describe_df.columns:
-            describe_text += f"{col}:\n"
-            describe_text += f"Count: {describe_df[col]['count']}\n"
-            describe_text += f"Mean: {describe_df[col]['mean'] if 'mean' in describe_df[col] else 'N/A'}\n"
-            describe_text += f"Std: {describe_df[col]['std'] if 'std' in describe_df[col] else 'N/A'}\n"
-            describe_text += f"Min: {describe_df[col]['min'] if 'min' in describe_df[col] else 'N/A'}\n"
-            describe_text += f"25%: {describe_df[col]['25%'] if '25%' in describe_df[col] else 'N/A'}\n"
-            describe_text += f"50%: {describe_df[col]['50%'] if '50%' in describe_df[col] else 'N/A'}\n"
-            describe_text += f"75%: {describe_df[col]['75%'] if '75%' in describe_df[col] else 'N/A'}\n"
-            describe_text += f"Max: {describe_df[col]['max'] if 'max' in describe_df[col] else 'N/A'}\n\n"
-        messagebox.showinfo("Data Description", describe_text.strip())
-
-    def show_null_counts(self):
-        if self.df is not None:
-            null_counts = self.df.isnull().sum()
-            null_counts_text = "Null Value Counts:\n\n" + str(null_counts)
-            messagebox.showinfo("Null Value Counts", null_counts_text)
-
-    def show_full_data(self):
-        self.display_data(self.df)
-
-    def apply_filter(self):
-        column = self.filter_column.get()
-        value = self.filter_value_entry.get()
-        if column and value:
-            filtered_df = self.df[self.df[column] == value]
-            self.display_data(filtered_df)
-
-    def sort_data(self):
-        if self.df is not None:
-            sorted_df = self.df.sort_values(by=self.df.columns[0])  # Default sort by the first column
-            self.display_data(sorted_df)
-
-    def drop_na(self):
-        if self.df is not None:
-            cleaned_df = self.df.dropna()
-            self.display_data(cleaned_df)
-
-    def fill_na(self):
-        if self.df is not None:
-            filled_df = self.df.fillna(0)  # Filling NA with 0, can be modified
-            self.display_data(filled_df)
-
-    def remove_duplicates(self):
-        if self.df is not None:
-            deduplicated_df = self.df.drop_duplicates()
-            self.display_data(deduplicated_df)
-
-    def apply_grouping(self):
-        column = self.group_column.get()
-        agg_func = self.agg_function.get()
-        if column:
-            grouped_df = self.df.groupby(column).agg(agg_func).reset_index()
-            self.display_data(grouped_df)
-
-    def plot_data(self):
-        plot_type = self.plot_type.get()
-        x_column = self.x_column.get()
-        y_column = self.y_column.get()
-        if plot_type and x_column and y_column:
-            if plot_type == 'line':
-                self.df.plot(x=x_column, y=y_column, kind='line')
-            elif plot_type == 'bar':
-                self.df.plot(x=x_column, y=y_column, kind='bar')
-            elif plot_type == 'hist':
-                self.df[y_column].plot(kind='hist')
-            elif plot_type == 'scatter':
-                self.df.plot(x=x_column, y=y_column, kind='scatter')
-            plt.show()
-
-    def export_data(self):
-        file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv"), ("Excel files", "*.xlsx")])
-        if file_path:
-            try:
-                if file_path.endswith('.csv'):
-                    self.df.to_csv(file_path, index=False)
-                elif file_path.endswith('.xlsx'):
-                    self.df.to_excel(file_path, index=False)
-                messagebox.showinfo("Success", "Data exported successfully!")
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to export data: {e}")
-
-    def display_data(self, data):
-        if data is not None:
-            self.clear_frame()
-            table = Table(self.frame, dataframe=data, showtoolbar=True, showstatusbar=True)
-            table.show()
-
-    def clear_frame(self):
-        for widget in self.frame.winfo_children():
-            widget.destroy()
+def main():
+    df = upload_file()
+    
+    if df is not None:
+        show_full_data(df)
+        data_understanding(df)
+        data_cleaning(df)
+        univariate_analysis(df)
+        multivariate_analysis(df)
+        feature_engineering(df)
+        anomaly_detection(df)
+        data_visualization(df)
+        identify_patterns_and_trends(df)
+        insights_summary(df)
+        x_y_visualization(df)
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = PandasTkApp(root)
-    root.mainloop()
+    main()
